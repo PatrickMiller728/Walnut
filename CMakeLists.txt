@@ -1,4 +1,4 @@
-cmake_minimum_required(3.26)
+cmake_minimum_required(VERSION 3.26)
 project(Walnut)
 
 set(CMAKE_CXX_STANDARD 20)

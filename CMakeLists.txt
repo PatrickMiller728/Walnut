@@ -6,10 +6,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(Vulkan REQUIRED)
-find_package(OpenGL REQUIRED)
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/vendor/glfw)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/vendor/glm)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/vendor/spdlog)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/vendor/yaml-cpp)
 
 # add imgui
 file(GLOB IMGUI_SRC
@@ -19,15 +20,8 @@ file(GLOB IMGUI_SRC
 )
 add_library(imgui STATIC ${IMGUI_SRC})
 target_link_libraries(imgui PUBLIC glfw)
+target_link_libraries(imgui PUBLIC Vulkan::Vulkan)
 target_include_directories(imgui PUBLIC "vendor/imgui")
-
-include_directories(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/vendor/glfw/include)
-include_directories(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/vendor/imgui)
-include_directories(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/vendor/stb_image)
-include_directories(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/Walnut/Source)
-include_directories(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/Walnut/GUI)
-
-include_directories(${PROJECT_NAME} PRIVATE Platform/GUI/Walnut/ImGui ${Vulkan_INCLUDE_DIRS})
 
 file(GLOB_RECURSE ${PROJECT_NAME}_SRC
         ${CMAKE_CURRENT_SOURCE_DIR}/Walnut/Platform/GUI/Walnut/**.h
@@ -37,4 +31,14 @@ file(GLOB_RECURSE ${PROJECT_NAME}_SRC
 )
 
 add_library(${PROJECT_NAME} STATIC ${${PROJECT_NAME}_SRC})
-target_link_libraries(${PROJECT_NAME} PRIVATE ${Vulkan_LIBRARIES})
+
+target_link_libraries(${PROJECT_NAME} PUBLIC Vulkan::Vulkan)
+target_link_libraries(${PROJECT_NAME} PUBLIC glfw)
+target_link_libraries(${PROJECT_NAME} PUBLIC glm)
+target_link_libraries(${PROJECT_NAME} PUBLIC spdlog)
+target_link_libraries(${PROJECT_NAME} PUBLIC yaml-cpp)
+target_link_libraries(${PROJECT_NAME} PUBLIC imgui)
+
+include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/vendor/stb_image)
+include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/Walnut/Source)
+include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/Walnut/Platform/GUI)

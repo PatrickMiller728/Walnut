@@ -1,3 +1,6 @@
+#include <imgui_impl_glfw.h>
+#include <imgui_impl_vulkan.h>
+
 #include "ApplicationGUI.h"
 
 #include "Walnut/UI/UI.h"
@@ -7,10 +10,8 @@
 // Adapted from Dear ImGui Vulkan example
 //
 
-#include "imgui_internal.h"
 
-#include "backends/imgui_impl_glfw.h"
-#include "backends/imgui_impl_vulkan.h"
+#include "imgui_internal.h"
 
 #include <stdio.h>          // printf, fprintf
 #include <stdlib.h>         // abort

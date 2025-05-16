@@ -1,8 +1,8 @@
+#include <imgui_stdlib.h>
+
 #include "Console.h"
 
 #include "Walnut/ApplicationGUI.h"
-
-#include "misc/cpp/imgui_stdlib.h"
 
 namespace Walnut::UI {
 

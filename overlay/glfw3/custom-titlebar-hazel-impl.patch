@@ -1,0 +1,419 @@
+diff --git a/include/GLFW/glfw3.h b/include/GLFW/glfw3.h
+index 79b06288..fd0875a5 100644
+--- a/include/GLFW/glfw3.h
++++ b/include/GLFW/glfw3.h
+@@ -922,6 +922,15 @@ extern "C" {
+  */
+ #define GLFW_FOCUS_ON_SHOW          0x0002000C
+ 
++/*! @brief Window has titlebar window hint and attribute
++  *
++  *  Window has titlebar [window hint](@ref GLFW_TITLEBAR_hint) and
++  *  [window attribute](@ref GLFW_TITLEBAR_attrib).
++  *
++  *  NOTE: Added by Hazel
++  */
++#define GLFW_TITLEBAR               0x00C2000D
++
+ /*! @brief Mouse input transparency window hint and attribute
+  *
+  *  Mouse input transparency [window hint](@ref GLFW_MOUSE_PASSTHROUGH_hint) or
+@@ -1613,6 +1622,26 @@ typedef void (* GLFWerrorfun)(int error_code, const char* description);
+  */
+ typedef void (* GLFWwindowposfun)(GLFWwindow* window, int xpos, int ypos);
+ 
++/*! @brief The function pointer type for window titlebar hittest callbacks.
++ *
++ *  This is the function pointer type for window titelebar hittest callbacks.
++ *  A window  titlebar hittest callback function has the following signature:
++ *  @code
++ *  void callback_name(GLFWwindow* window, int xpos, int ypos, int* hit)
++ *  @endcode
++ *
++ *  @param[in] window The window that was moved.
++ *  @param[in] xpos The x-coordinate of mouse, in screen coordinates.
++ *  @param[in] ypos The y-coordinate of mouse, in screen coordinates.
++ *  @param[out] hit 'true' or '1' if mouse hovering titlebar.
++ *
++ *  @sa @ref window_pos
++ *  @sa @ref glfwSetTitlebarHitTestCallback
++ *
++ *  @ingroup window
++ */
++typedef void (*GLFWtitlebarhittestfun)(GLFWwindow*, int, int, int*);
++
+ /*! @brief The function pointer type for window size callbacks.
+  *
+  *  This is the function pointer type for window size callbacks.  A window size
+@@ -4232,6 +4261,37 @@ GLFWAPI void* glfwGetWindowUserPointer(GLFWwindow* window);
+  */
+ GLFWAPI GLFWwindowposfun glfwSetWindowPosCallback(GLFWwindow* window, GLFWwindowposfun callback);
+ 
++/*! @brief Sets the titlebar hittest callback for the specified window.
++ *
++ *  This function sets the titlebar hittest callback of the specified window,
++ *  which is called when the mouse hoveres the window to ask client if it's
++ *  hovering over custom titlebar area which needs to be handles as a native
++ *  titlebar. The callback is provided with the x and y coordinates of the mouse
++ *  cursor in screen coordinates.
++ *
++ *  @param[in] window The window whose callback to set.
++ *  @param[in] callback The new callback, or `NULL` to remove the currently set
++ *  callback.
++ *  @return The previously set callback, or `NULL` if no callback was set or the
++ *  library had not been [initialized](@ref intro_init).
++ *
++ *  @callback_signature
++ *  @code
++ *  void function_name(GLFWwindow* window, int xpos, int ypos, int* hit)
++ *  @endcode
++ *  For more information about the callback parameters, see the
++ *  [function pointer type](@ref GLFWtitlebarhittestfun).
++ *
++ *  @errors Possible errors include @ref GLFW_NOT_INITIALIZED.
++ *
++ *  @thread_safety This function must only be called from the main thread.
++ *
++ *  @sa @ref window_pos
++ *
++ *  @ingroup window
++ */
++GLFWAPI GLFWtitlebarhittestfun glfwSetTitlebarHitTestCallback(GLFWwindow* window, GLFWtitlebarhittestfun callback);
++
+ /*! @brief Sets the size callback for the specified window.
+  *
+  *  This function sets the size callback of the specified window, which is
+diff --git a/src/cocoa_init.m b/src/cocoa_init.m
+index 15dc4ec4..368de25d 100644
+--- a/src/cocoa_init.m
++++ b/src/cocoa_init.m
+@@ -559,6 +559,10 @@ GLFWbool _glfwConnectCocoa(int platformID, _GLFWplatform* platform)
+         .waitEvents = _glfwWaitEventsCocoa,
+         .waitEventsTimeout = _glfwWaitEventsTimeoutCocoa,
+         .postEmptyEvent = _glfwPostEmptyEventCocoa,
++
++          // Hazel
++        .setWindowTitlebarNull = _glfwSetWindowTitlebarNull,
++
+         .getEGLPlatform = _glfwGetEGLPlatformCocoa,
+         .getEGLNativeDisplay = _glfwGetEGLNativeDisplayCocoa,
+         .getEGLNativeWindow = _glfwGetEGLNativeWindowCocoa,
+diff --git a/src/cocoa_window.m b/src/cocoa_window.m
+index e69b5fe0..7f53b851 100644
+--- a/src/cocoa_window.m
++++ b/src/cocoa_window.m
+@@ -1472,6 +1472,13 @@ void _glfwSetWindowDecoratedCocoa(_GLFWwindow* window, GLFWbool enabled)
+     } // autoreleasepool
+ }
+ 
++void _glfwPlatformSetWindowTitlebar(_GLFWwindow* window, GLFWbool enabled)
++{
++    // TODO
++    _glfwInputError(GLFW_PLATFORM_ERROR,
++        "Cocoa: Window attribute setting not implemented yet");
++}
++
+ void _glfwSetWindowFloatingCocoa(_GLFWwindow* window, GLFWbool enabled)
+ {
+     @autoreleasepool {
+diff --git a/src/internal.h b/src/internal.h
+index 4f097aa8..539ff982 100644
+--- a/src/internal.h
++++ b/src/internal.h
+@@ -406,6 +406,7 @@ struct _GLFWwndconfig
+     GLFWbool      resizable;
+     GLFWbool      visible;
+     GLFWbool      decorated;
++    GLFWbool      titlebar;
+     GLFWbool      focused;
+     GLFWbool      autoIconify;
+     GLFWbool      floating;
+@@ -565,6 +566,7 @@ struct _GLFWwindow
+ 
+     struct {
+         GLFWwindowposfun          pos;
++        GLFWtitlebarhittestfun    tbhittest;
+         GLFWwindowsizefun         size;
+         GLFWwindowclosefun        close;
+         GLFWwindowrefreshfun      refresh;
+@@ -751,6 +753,10 @@ struct _GLFWplatform
+     void (*waitEvents)(void);
+     void (*waitEventsTimeout)(double);
+     void (*postEmptyEvent)(void);
++
++    // Hazel
++    void (*setWindowTitleBar)(_GLFWwindow*,GLFWbool);
++
+     // EGL
+     EGLenum (*getEGLPlatform)(EGLint**);
+     EGLNativeDisplayType (*getEGLNativeDisplay)(void);
+@@ -921,6 +927,7 @@ GLFWproc _glfwPlatformGetModuleSymbol(void* module, const char* name);
+ void _glfwInputWindowFocus(_GLFWwindow* window, GLFWbool focused);
+ void _glfwInputWindowPos(_GLFWwindow* window, int xpos, int ypos);
+ void _glfwInputWindowSize(_GLFWwindow* window, int width, int height);
++void _glfwInputTitleBarHitTest(_GLFWwindow* window, int posX, int posY, int* hit);
+ void _glfwInputFramebufferSize(_GLFWwindow* window, int width, int height);
+ void _glfwInputWindowContentScale(_GLFWwindow* window,
+                                   float xscale, float yscale);
+diff --git a/src/null_platform.h b/src/null_platform.h
+index dbcb835b..48d56202 100644
+--- a/src/null_platform.h
++++ b/src/null_platform.h
+@@ -180,6 +180,7 @@ typedef struct _GLFWwindowNull
+     GLFWbool        maximized;
+     GLFWbool        resizable;
+     GLFWbool        decorated;
++    GLFWbool        titlebar;
+     GLFWbool        floating;
+     GLFWbool        transparent;
+     float           opacity;
+@@ -258,6 +259,10 @@ void _glfwPollEventsNull(void);
+ void _glfwWaitEventsNull(void);
+ void _glfwWaitEventsTimeoutNull(double timeout);
+ void _glfwPostEmptyEventNull(void);
++
++// Hazel
++void _glfwSetWindowTitlebarNull(_GLFWwindow* window, GLFWbool enabled);
++
+ void _glfwGetCursorPosNull(_GLFWwindow* window, double* xpos, double* ypos);
+ void _glfwSetCursorPosNull(_GLFWwindow* window, double x, double y);
+ void _glfwSetCursorModeNull(_GLFWwindow* window, int mode);
+diff --git a/src/null_window.c b/src/null_window.c
+index f0e1dcc9..b915c0d8 100644
+--- a/src/null_window.c
++++ b/src/null_window.c
+@@ -399,6 +399,11 @@ void _glfwSetWindowDecoratedNull(_GLFWwindow* window, GLFWbool enabled)
+     window->null.decorated = enabled;
+ }
+ 
++void _glfwSetWindowTitlebarNull(_GLFWwindow* window, GLFWbool enabled)
++{
++    window->null.titlebar = enabled;
++}
++
+ void _glfwSetWindowFloatingNull(_GLFWwindow* window, GLFWbool enabled)
+ {
+     window->null.floating = enabled;
+diff --git a/src/win32_init.c b/src/win32_init.c
+index 77ab56ba..064516bf 100644
+--- a/src/win32_init.c
++++ b/src/win32_init.c
+@@ -668,6 +668,7 @@ GLFWbool _glfwConnectWin32(int platformID, _GLFWplatform* platform)
+         .waitEvents = _glfwWaitEventsWin32,
+         .waitEventsTimeout = _glfwWaitEventsTimeoutWin32,
+         .postEmptyEvent = _glfwPostEmptyEventWin32,
++        .setWindowTitleBar = _glfwSetWindowTitlebarWin32,
+         .getEGLPlatform = _glfwGetEGLPlatformWin32,
+         .getEGLNativeDisplay = _glfwGetEGLNativeDisplayWin32,
+         .getEGLNativeWindow = _glfwGetEGLNativeWindowWin32,
+diff --git a/src/win32_platform.h b/src/win32_platform.h
+index a2f86852..7fef17a2 100644
+--- a/src/win32_platform.h
++++ b/src/win32_platform.h
+@@ -584,6 +584,9 @@ void _glfwWaitEventsWin32(void);
+ void _glfwWaitEventsTimeoutWin32(double timeout);
+ void _glfwPostEmptyEventWin32(void);
+ 
++// Hazel
++void _glfwSetWindowTitlebarWin32(_GLFWwindow* window, GLFWbool enabled);
++
+ void _glfwGetCursorPosWin32(_GLFWwindow* window, double* xpos, double* ypos);
+ void _glfwSetCursorPosWin32(_GLFWwindow* window, double xpos, double ypos);
+ void _glfwSetCursorModeWin32(_GLFWwindow* window, int mode);
+diff --git a/src/win32_window.c b/src/win32_window.c
+index d014944b..f8a968e6 100644
+--- a/src/win32_window.c
++++ b/src/win32_window.c
+@@ -533,6 +533,9 @@ static void maximizeWindowManually(_GLFWwindow* window)
+ //
+ static LRESULT CALLBACK windowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+ {
++    static RECT border_thickness = { 4, 4, 4, 4 };
++    BOOL hasThickFrame = GetWindowLongPtr(hWnd, GWL_STYLE) & WS_THICKFRAME;
++
+     _GLFWwindow* window = GetPropW(hWnd, L"GLFW");
+     if (!window)
+     {
+@@ -1266,6 +1269,40 @@ static LRESULT CALLBACK windowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM l
+             DragFinish(drop);
+             return 0;
+         }
++
++        case WM_CREATE:
++        {
++            if (_glfw.hints.window.titlebar)
++                break;
++
++            if (hasThickFrame)
++            {
++                RECT size_rect;
++                GetWindowRect(hWnd, &size_rect);
++
++                // Inform the application of the frame change to force redrawing with the new
++                // client area that is extended into the title bar
++                SetWindowPos(
++                    hWnd, NULL,
++                    size_rect.left, size_rect.top,
++                    size_rect.right - size_rect.left, size_rect.bottom - size_rect.top,
++                    SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE
++                );
++                break;
++            }
++
++            break;
++        }
++
++        case WM_ACTIVATE:
++        {
++            if (_glfw.hints.window.titlebar)
++                break;
++
++            RECT title_bar_rect = {0};
++            InvalidateRect(hWnd, &title_bar_rect, FALSE);
++            break;
++        }
+     }
+ 
+     return DefWindowProcW(hWnd, uMsg, wParam, lParam);
+@@ -2010,6 +2047,11 @@ void _glfwSetWindowDecoratedWin32(_GLFWwindow* window, GLFWbool enabled)
+     updateWindowStyles(window);
+ }
+ 
++void _glfwSetWindowTitlebarWin32(_GLFWwindow* window, GLFWbool enabled)
++{
++    updateWindowStyles(window);
++}
++
+ void _glfwSetWindowFloatingWin32(_GLFWwindow* window, GLFWbool enabled)
+ {
+     const HWND after = enabled ? HWND_TOPMOST : HWND_NOTOPMOST;
+diff --git a/src/window.c b/src/window.c
+index e03121a4..41b06687 100644
+--- a/src/window.c
++++ b/src/window.c
+@@ -93,6 +93,14 @@ void _glfwInputWindowSize(_GLFWwindow* window, int width, int height)
+         window->callbacks.size((GLFWwindow*) window, width, height);
+ }
+ 
++// Notifies shared code that mouse hittest needs to be resolved
++//
++void _glfwInputTitleBarHitTest(_GLFWwindow* window, int posX, int posY, int* hit)
++{
++    if (window->callbacks.tbhittest)
++        window->callbacks.tbhittest((GLFWwindow*)window, posX, posY, hit);
++}
++
+ // Notifies shared code that a window has been iconified or restored
+ //
+ void _glfwInputWindowIconify(_GLFWwindow* window, GLFWbool iconified)
+@@ -269,6 +277,7 @@ void glfwDefaultWindowHints(void)
+     _glfw.hints.window.resizable    = GLFW_TRUE;
+     _glfw.hints.window.visible      = GLFW_TRUE;
+     _glfw.hints.window.decorated    = GLFW_TRUE;
++    _glfw.hints.window.titlebar     = GLFW_TRUE;
+     _glfw.hints.window.focused      = GLFW_TRUE;
+     _glfw.hints.window.autoIconify  = GLFW_TRUE;
+     _glfw.hints.window.centerCursor = GLFW_TRUE;
+@@ -352,6 +361,9 @@ GLFWAPI void glfwWindowHint(int hint, int value)
+         case GLFW_DECORATED:
+             _glfw.hints.window.decorated = value ? GLFW_TRUE : GLFW_FALSE;
+             return;
++        case GLFW_TITLEBAR:
++            _glfw.hints.window.titlebar = value ? GLFW_TRUE : GLFW_FALSE;
++            return;
+         case GLFW_FOCUSED:
+             _glfw.hints.window.focused = value ? GLFW_TRUE : GLFW_FALSE;
+             return;
+@@ -906,6 +918,8 @@ GLFWAPI int glfwGetWindowAttrib(GLFWwindow* handle, int attrib)
+             return window->resizable;
+         case GLFW_DECORATED:
+             return window->decorated;
++        case GLFW_TITLEBAR:
++            return _glfw.hints.window.titlebar;
+         case GLFW_FLOATING:
+             return window->floating;
+         case GLFW_AUTO_ICONIFY:
+@@ -967,6 +981,15 @@ GLFWAPI void glfwSetWindowAttrib(GLFWwindow* handle, int attrib, int value)
+                 _glfw.platform.setWindowDecorated(window, value);
+             return;
+ 
++        case GLFW_TITLEBAR:
++            if (_glfw.hints.window.titlebar == value)
++                return;
++
++            _glfw.hints.window.titlebar = value;
++            if (!window->monitor)
++                _glfw.platform.setWindowTitleBar(window, value);
++            return;
++
+         case GLFW_FLOATING:
+             window->floating = value;
+             if (!window->monitor)
+@@ -1068,6 +1091,16 @@ GLFWAPI GLFWwindowposfun glfwSetWindowPosCallback(GLFWwindow* handle,
+     return cbfun;
+ }
+ 
++GLFWAPI GLFWtitlebarhittestfun glfwSetTitlebarHitTestCallback(GLFWwindow* handle, GLFWtitlebarhittestfun tbhtfun)
++{
++    _GLFWwindow* window = (_GLFWwindow*)handle;
++    assert(window != NULL);
++
++    _GLFW_REQUIRE_INIT_OR_RETURN(NULL);
++    _GLFW_SWAP(GLFWtitlebarhittestfun, window->callbacks.tbhittest, tbhtfun);
++    return tbhtfun;
++}
++
+ GLFWAPI GLFWwindowsizefun glfwSetWindowSizeCallback(GLFWwindow* handle,
+                                                     GLFWwindowsizefun cbfun)
+ {
+diff --git a/src/wl_window.c b/src/wl_window.c
+index 72c1a402..2e80b5a9 100644
+--- a/src/wl_window.c
++++ b/src/wl_window.c
+@@ -2604,6 +2604,13 @@ void _glfwSetWindowDecoratedWayland(_GLFWwindow* window, GLFWbool enabled)
+     }
+ }
+ 
++void _glfwPlatformSetWindowTitlebar(_GLFWwindow* window, GLFWbool enabled)
++{
++    // TODO
++    _glfwInputError(GLFW_PLATFORM_ERROR,
++        "Wayland: Window attribute setting not implemented yet");
++}
++
+ void _glfwSetWindowFloatingWayland(_GLFWwindow* window, GLFWbool enabled)
+ {
+     _glfwInputError(GLFW_FEATURE_UNAVAILABLE,
+diff --git a/src/x11_init.c b/src/x11_init.c
+index 6b34c263..98727340 100644
+--- a/src/x11_init.c
++++ b/src/x11_init.c
+@@ -1241,6 +1241,10 @@ GLFWbool _glfwConnectX11(int platformID, _GLFWplatform* platform)
+         .waitEvents = _glfwWaitEventsX11,
+         .waitEventsTimeout = _glfwWaitEventsTimeoutX11,
+         .postEmptyEvent = _glfwPostEmptyEventX11,
++
++        // Hazel
++        .setWindowTitlebarNull = _glfwSetWindowTitlebarNull,
++
+         .getEGLPlatform = _glfwGetEGLPlatformX11,
+         .getEGLNativeDisplay = _glfwGetEGLNativeDisplayX11,
+         .getEGLNativeWindow = _glfwGetEGLNativeWindowX11,
+diff --git a/src/x11_window.c b/src/x11_window.c
+index 322349f0..542e189a 100644
+--- a/src/x11_window.c
++++ b/src/x11_window.c
+@@ -2643,6 +2643,13 @@ void _glfwSetWindowDecoratedX11(_GLFWwindow* window, GLFWbool enabled)
+                     sizeof(hints) / sizeof(long));
+ }
+ 
++void _glfwPlatformSetWindowTitlebar(_GLFWwindow* window, GLFWbool enabled)
++{
++    // TODO
++    _glfwInputError(GLFW_PLATFORM_ERROR,
++        "X11: Window attribute setting not implemented yet");
++}
++
+ void _glfwSetWindowFloatingX11(_GLFWwindow* window, GLFWbool enabled)
+ {
+     if (!_glfw.x11.NET_WM_STATE || !_glfw.x11.NET_WM_STATE_ABOVE)

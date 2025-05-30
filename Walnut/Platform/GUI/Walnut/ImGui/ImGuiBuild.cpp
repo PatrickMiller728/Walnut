@@ -1,4 +1,4 @@
-#include "backends/imgui_impl_vulkan.cpp"
-#include "backends/imgui_impl_glfw.cpp"
+#include "imgui_impl_vulkan.h"
+#include "imgui_impl_glfw.h"
 
-#include "misc/cpp/imgui_stdlib.cpp"
+#include "imgui_stdlib.h"

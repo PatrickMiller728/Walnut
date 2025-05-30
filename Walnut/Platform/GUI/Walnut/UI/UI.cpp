@@ -171,7 +171,7 @@ namespace Walnut::UI {
 		{
 			ImGuiContext& g = *GImGui;
 			ImVec2 new_size = size_desired;
-			if (g.NextWindowData.HasFlags & ImGuiNextWindowDataFlags_HasSizeConstraint)
+			if (g.NextWindowData.Flags & ImGuiNextWindowDataFlags_HasSizeConstraint)
 			{
 				// Using -1,-1 on either X/Y axis to preserve the current size.
 				ImRect cr = g.NextWindowData.SizeConstraintRect;
@@ -519,8 +519,8 @@ namespace Walnut::UI {
 				IM_ASSERT(window->DC.NavLayersActiveMaskNext & (1 << layer)); // Sanity check
 				ImGui::FocusWindow(window);
 				ImGui::SetNavID(window->NavLastIds[layer], layer, 0, window->NavRectRel[layer]);
-				g.NavCursorVisible = false; // Hide highlight for the current frame so we don't see the intermediary selection.
-				g.NavHighlightItemUnderNav = g.NavMousePosDirty = true;
+				g.NavDisableHighlight = true; // Hide highlight for the current frame so we don't see the intermediary selection.
+				g.NavDisableMouseHover = g.NavMousePosDirty = true;
 				ImGui::NavMoveRequestForward(g.NavMoveDir, g.NavMoveClipDir, g.NavMoveFlags, g.NavMoveScrollFlags); // Repeat
 			}
 		}

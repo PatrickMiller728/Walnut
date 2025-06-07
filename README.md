@@ -99,10 +99,8 @@ git submodule add -b <branch> <url> <path>
 ```
 
 There are a few caveats to using it as a submodule, entirely caused by vcpkg:
-- Vcpkg will look for `vcpkg.json` in the root directory, when including Walnut using `add_subdirectory()` in `CMakeLists.txt`. You will need to copy Walnut's `vcpkg.json` file from Walnut to the root of your repository.
+- Vcpkg will look for `vcpkg.json` in the root directory by default. You can change that by manually setting the cache variable `VCPKG_MANIFEST_DIR`.
   - For an example: check out my [Raytracing Project](https://github.com/PatrickMiller728/raytracing).
 - Vcpkg currently does not support having two high-level manifest files. If you are using vcpkg in another part of your application, you will need to add Walnut's dependencies to the root `vcpkg.json`.
-- Using the `ExternalProject` CMake Module may fix one or both of these issues.
-
-For these reasons, it may be more useful to include Walnut's dependencies as submodules instead of using vcpkg.
+  - Using the `ExternalProject` CMake Module may fix this.
 

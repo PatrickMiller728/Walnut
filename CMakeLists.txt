@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.31.6)
+cmake_minimum_required(VERSION 3.30.1)
 project(walnut)
 
 set(CMAKE_CXX_STANDARD 20)

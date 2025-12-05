@@ -67,7 +67,8 @@ target_include_directories(${PROJECT_NAME} PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/vendor/stb_image>   # for headers when building
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Walnut/Source>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Walnut/Platform/GUI>
-        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>  # for client in install mode
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/Walnut/Source>       # for client in install mode
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/Walnut/Platform/GUI>
 )
 
 # https://github.com/fmtlib/fmt/blob/master/CMakeLists.txt

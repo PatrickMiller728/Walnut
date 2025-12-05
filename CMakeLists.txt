@@ -29,7 +29,9 @@ set(SOURCE_FILES
         Walnut/Source/Walnut/Utils/StringUtils.cpp
 )
 
-set(API_HEADERS
+add_library(${PROJECT_NAME} STATIC ${SOURCE_FILES})
+
+target_sources(walnut PUBLIC FILE_SET HEADERS FILES
         Walnut/Platform/GUI/Walnut/ApplicationGUI.h
         Walnut/Platform/GUI/Walnut/Image.h
         Walnut/Platform/GUI/Walnut/ImGui/ImGuiTheme.h
@@ -52,8 +54,6 @@ set(API_HEADERS
         Walnut/Source/Walnut/Serialization/StreamWriter.h
         Walnut/Source/Walnut/Utils/StringUtils.h
 )
-
-add_library(${PROJECT_NAME} STATIC ${SOURCE_FILES} ${API_HEADERS})
 
 target_link_libraries(${PROJECT_NAME} PRIVATE glfw)
 target_link_libraries(${PROJECT_NAME} PRIVATE glm::glm)
@@ -85,7 +85,8 @@ install(TARGETS ${PROJECT_NAME}
         ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
         LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
         RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
-        PUBLIC_HEADER DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/walnut"
+        FILE_SET HEADERS DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME}"
+        INCLUDES DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
 )
 
 # Export all targets

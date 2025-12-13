@@ -21,6 +21,7 @@ set(SOURCE_FILES
         Walnut/Platform/GUI/Walnut/UI/Console.cpp
         Walnut/Platform/GUI/Walnut/UI/UI.cpp
         Walnut/Source/Walnut/Random.cpp
+        Walnut/Source/Walnut/Layer.cpp
         Walnut/Source/Walnut/Core/Log.cpp
         Walnut/Source/Walnut/Serialization/BufferStream.cpp
         Walnut/Source/Walnut/Serialization/FileStream.cpp

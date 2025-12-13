@@ -65,6 +65,11 @@ namespace Walnut {
 
 		void PushLayer(const std::shared_ptr<Layer>& layer) { m_LayerStack.emplace_back(layer); layer->OnAttach(); }
 
+		void PopLayer(const std::shared_ptr<Layer>& layer) {
+			layer->OnDetach();
+			std::erase(m_LayerStack, layer);
+		}
+
 		const std::vector<std::shared_ptr<Layer>>& GetLayerStack() const { return m_LayerStack; }
 
 		void Close();
